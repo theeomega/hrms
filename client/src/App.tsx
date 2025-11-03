@@ -13,6 +13,7 @@ import Attendance from "@/pages/Attendance";
 import LeaveRequests from "@/pages/LeaveRequests";
 import Profile from "@/pages/Profile";
 import Notifications from "@/pages/Notifications";
+import Reports from "@/pages/Reports";
 import NotFound from "@/pages/not-found";
 import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
@@ -54,13 +55,14 @@ function AuthenticatedApp() {
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <ThemeToggle />
           </header>
-          <main className="flex-1 overflow-auto p-6">
+          <main className="flex-1 overflow-auto p-6 bg-muted/30">
             <Switch>
               <Route path="/" component={() => <Dashboard isHRAdmin={isHRAdmin} />} />
               <Route path="/employees" component={Employees} />
               <Route path="/attendance" component={Attendance} />
               <Route path="/leaves" component={() => <Dashboard isHRAdmin={false} />} />
               <Route path="/leave-requests" component={LeaveRequests} />
+              <Route path="/reports" component={Reports} />
               <Route path="/notifications" component={Notifications} />
               <Route path="/profile" component={Profile} />
               <Route component={NotFound} />

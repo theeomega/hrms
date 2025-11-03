@@ -1,4 +1,5 @@
 import { Users, UserCheck, Clock, TrendingUp } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import StatCard from "@/components/StatCard";
 import AttendanceButton from "@/components/AttendanceButton";
 import LeaveBalanceCard from "@/components/LeaveBalanceCard";
@@ -57,9 +58,15 @@ export default function Dashboard({ isHRAdmin = false }: DashboardProps) {
   if (isHRAdmin) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">HR Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back! Here's your team overview</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">HR Admin Dashboard</h1>
+            <p className="text-muted-foreground">Welcome back! Here's your team overview</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-muted-foreground">Today</p>
+            <p className="text-lg font-semibold">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -69,9 +76,56 @@ export default function Dashboard({ isHRAdmin = false }: DashboardProps) {
           <StatCard title="Attendance Rate" value="94.2%" icon={TrendingUp} trend="+2.3% this month" trendUp={true} />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <PendingLeaveRequests requests={mockLeaveRequests} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <PendingLeaveRequests requests={mockLeaveRequests} />
+          </div>
           <RecentActivityFeed activities={mockActivities} />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="p-6">
+            <h3 className="font-semibold mb-4">Quick Stats</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">New Hires This Month</span>
+                <span className="font-semibold">12</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Upcoming Birthdays</span>
+                <span className="font-semibold">5</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Employees on Leave</span>
+                <span className="font-semibold">16</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Average Work Hours/Day</span>
+                <span className="font-semibold">8.3 hrs</span>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-6">
+            <h3 className="font-semibold mb-4">Department Overview</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Engineering</span>
+                <span className="font-semibold">85 emp</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Sales</span>
+                <span className="font-semibold">58 emp</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Product</span>
+                <span className="font-semibold">42 emp</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Marketing</span>
+                <span className="font-semibold">35 emp</span>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
     );
@@ -79,9 +133,15 @@ export default function Dashboard({ isHRAdmin = false }: DashboardProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Employee Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back! Manage your attendance and leaves</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Employee Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back! Manage your attendance and leaves</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm text-muted-foreground">Today</p>
+          <p className="text-lg font-semibold">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -92,8 +152,29 @@ export default function Dashboard({ isHRAdmin = false }: DashboardProps) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
           <AttendanceTable records={mockAttendance} />
+          <Card className="p-6">
+            <h3 className="font-semibold mb-4">This Month Summary</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground mb-1">Total Working Days</p>
+                <p className="text-2xl font-bold">23</p>
+              </div>
+              <div className="p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground mb-1">Days Worked</p>
+                <p className="text-2xl font-bold">22</p>
+              </div>
+              <div className="p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground mb-1">Total Hours</p>
+                <p className="text-2xl font-bold">180</p>
+              </div>
+              <div className="p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground mb-1">Late Check-ins</p>
+                <p className="text-2xl font-bold">2</p>
+              </div>
+            </div>
+          </Card>
         </div>
         <div className="space-y-6">
           <AttendanceButton />
