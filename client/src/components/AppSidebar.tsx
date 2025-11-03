@@ -1,6 +1,7 @@
-import { Home, Calendar, FileText, Users, User, LogOut } from "lucide-react";
+import { Home, Calendar, FileText, Users, User, LogOut, Bell } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter } from "@/components/ui/sidebar";
 import { useLocation } from "wouter";
+import { Badge } from "@/components/ui/badge";
 
 interface AppSidebarProps {
   isHRAdmin?: boolean;
@@ -13,6 +14,7 @@ export default function AppSidebar({ isHRAdmin = false }: AppSidebarProps) {
     { title: "Dashboard", url: "/", icon: Home },
     { title: "My Attendance", url: "/attendance", icon: Calendar },
     { title: "My Leaves", url: "/leaves", icon: FileText },
+    { title: "Notifications", url: "/notifications", icon: Bell, badge: 2 },
     { title: "Profile", url: "/profile", icon: User },
   ];
 
@@ -21,6 +23,7 @@ export default function AppSidebar({ isHRAdmin = false }: AppSidebarProps) {
     { title: "Employees", url: "/employees", icon: Users },
     { title: "Attendance", url: "/attendance", icon: Calendar },
     { title: "Leave Requests", url: "/leave-requests", icon: FileText },
+    { title: "Notifications", url: "/notifications", icon: Bell, badge: 2 },
   ];
 
   const items = isHRAdmin ? hrItems : employeeItems;
@@ -39,9 +42,14 @@ export default function AppSidebar({ isHRAdmin = false }: AppSidebarProps) {
                     isActive={location === item.url}
                     data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
                   >
-                    <a href={item.url} onClick={(e) => { e.preventDefault(); setLocation(item.url); }}>
-                      <item.icon />
-                      <span>{item.title}</span>
+                    <a href={item.url} onClick={(e) => { e.preventDefault(); setLocation(item.url); }} className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </div>
+                      {item.badge && item.badge > 0 && (
+                        <Badge variant="default" className="ml-auto">{item.badge}</Badge>
+                      )}
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

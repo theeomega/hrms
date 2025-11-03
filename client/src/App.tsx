@@ -8,6 +8,11 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
+import Employees from "@/pages/Employees";
+import Attendance from "@/pages/Attendance";
+import LeaveRequests from "@/pages/LeaveRequests";
+import Profile from "@/pages/Profile";
+import Notifications from "@/pages/Notifications";
 import NotFound from "@/pages/not-found";
 import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
@@ -52,11 +57,12 @@ function AuthenticatedApp() {
           <main className="flex-1 overflow-auto p-6">
             <Switch>
               <Route path="/" component={() => <Dashboard isHRAdmin={isHRAdmin} />} />
-              <Route path="/employees" component={() => <Dashboard isHRAdmin={true} />} />
-              <Route path="/attendance" component={() => <Dashboard isHRAdmin={isHRAdmin} />} />
+              <Route path="/employees" component={Employees} />
+              <Route path="/attendance" component={Attendance} />
               <Route path="/leaves" component={() => <Dashboard isHRAdmin={false} />} />
-              <Route path="/leave-requests" component={() => <Dashboard isHRAdmin={true} />} />
-              <Route path="/profile" component={() => <Dashboard isHRAdmin={false} />} />
+              <Route path="/leave-requests" component={LeaveRequests} />
+              <Route path="/notifications" component={Notifications} />
+              <Route path="/profile" component={Profile} />
               <Route component={NotFound} />
             </Switch>
           </main>
