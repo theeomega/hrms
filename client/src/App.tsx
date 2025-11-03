@@ -67,13 +67,15 @@ function AuthenticatedApp() {
 }
 
 function Router() {
-  const [isAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   return (
     <Switch>
-      <Route path="/login" component={Login} />
+      <Route path="/login">
+        <Login onLogin={() => setIsAuthenticated(true)} />
+      </Route>
       <Route path="*">
-        {isAuthenticated ? <AuthenticatedApp /> : <Login />}
+        {isAuthenticated ? <AuthenticatedApp /> : <Login onLogin={() => setIsAuthenticated(true)} />}
       </Route>
     </Switch>
   );

@@ -7,7 +7,11 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { Building2 } from "lucide-react";
 
-export default function Login() {
+interface LoginProps {
+  onLogin: () => void;
+}
+
+export default function Login({ onLogin }: LoginProps) {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,6 +34,7 @@ export default function Login() {
       description: "Welcome back!",
     });
     
+    onLogin();
     setLocation("/");
   };
 
