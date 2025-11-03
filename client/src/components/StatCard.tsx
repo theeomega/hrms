@@ -11,20 +11,20 @@ interface StatCardProps {
 
 export default function StatCard({ title, value, icon: Icon, trend, trendUp }: StatCardProps) {
   return (
-    <Card className="p-6 hover-elevate transition-all duration-200 border-l-4 border-l-primary">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-muted-foreground mb-2">{title}</p>
-          <p className="text-3xl font-bold tracking-tight">{value}</p>
-          {trend && (
-            <p className={`text-xs font-medium mt-2 ${trendUp ? 'text-secondary' : 'text-accent'}`}>
-              {trend}
-            </p>
-          )}
+    <Card className="p-6">
+      <div className="flex items-center gap-4 mb-3">
+        <div className="p-2.5 rounded-lg bg-muted">
+          <Icon className="w-5 h-5 text-foreground" />
         </div>
-        <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
-          <Icon className="w-7 h-7 text-primary" />
-        </div>
+        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+      </div>
+      <div>
+        <p className="text-3xl font-bold mb-1">{value}</p>
+        {trend && (
+          <p className={`text-sm ${trendUp ? 'text-secondary' : 'text-muted-foreground'}`}>
+            {trend}
+          </p>
+        )}
       </div>
     </Card>
   );
