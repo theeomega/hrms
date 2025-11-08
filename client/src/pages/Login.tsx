@@ -6,18 +6,20 @@ import { Label } from "@/components/ui/label";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { Building2 } from "lucide-react";
+import { authAPI } from "@/lib/api";
 
 interface LoginProps {
-  onLogin: () => void;
+  onLogin: (user: any) => void;
 }
 
 export default function Login({ onLogin }: LoginProps) {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password) {
@@ -29,13 +31,27 @@ export default function Login({ onLogin }: LoginProps) {
       return;
     }
 
-    toast({
-      title: "Login Successful",
-      description: "Welcome back!",
-    });
+    setIsLoading(true);
     
-    onLogin();
-    setLocation("/");
+    try {
+      const { user } = await authAPI.login(email, password);
+      
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
+      });
+      
+      onLogin(user);
+      setLocation("/");
+    } catch (error) {
+      toast({
+        title: "Login Failed",
+        description: "Invalid credentials. Try admin@company.com / admin123 or john@company.com / john123",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -58,6 +74,7 @@ export default function Login({ onLogin }: LoginProps) {
               placeholder="you@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
               data-testid="input-email"
             />
           </div>
@@ -70,18 +87,30 @@ export default function Login({ onLogin }: LoginProps) {
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
               data-testid="input-password"
             />
           </div>
 
-          <Button type="submit" className="w-full" data-testid="button-login">
-            Sign In
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={isLoading}
+            data-testid="button-login"
+          >
+            {isLoading ? "Signing in..." : "Sign In"}
           </Button>
         </form>
 
         <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-          <p className="text-sm text-muted-foreground text-center">
-            Demo credentials: any email/password
+          <p className="text-sm text-muted-foreground text-center mb-2">
+            <strong>Demo Credentials:</strong>
+          </p>
+          <p className="text-xs text-muted-foreground text-center">
+            HR Admin: admin@company.com / admin123
+          </p>
+          <p className="text-xs text-muted-foreground text-center">
+            Employee: john@company.com / john123
           </p>
         </div>
       </Card>

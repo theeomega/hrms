@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { LogIn, LogOut, Clock } from "lucide-react";
+import { LogIn, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AttendanceButton() {
@@ -29,42 +28,36 @@ export default function AttendanceButton() {
     setCheckInTime(null);
   };
 
-  return (
-    <Card className="p-6">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-          <Clock className="w-5 h-5 text-primary" />
+  if (checkedIn && checkInTime) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-sm text-muted-foreground">Checked in at {checkInTime}</span>
         </div>
-        <div>
-          <h3 className="font-semibold">Quick Attendance</h3>
-          <p className="text-sm text-muted-foreground">Mark your attendance for today</p>
-        </div>
+        <Button 
+          variant="outline"
+          size="lg"
+          onClick={handleCheckOut}
+          className="w-full"
+          data-testid="button-checkout"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Check Out
+        </Button>
       </div>
-      
-      {checkedIn && checkInTime && (
-        <div className="mb-4 p-3 bg-chart-2/10 rounded-lg">
-          <p className="text-sm text-chart-2">Checked in at {checkInTime}</p>
-        </div>
-      )}
+    );
+  }
 
-      <Button 
-        className="w-full"
-        variant={checkedIn ? "destructive" : "default"}
-        onClick={checkedIn ? handleCheckOut : handleCheckIn}
-        data-testid={checkedIn ? "button-checkout" : "button-checkin"}
-      >
-        {checkedIn ? (
-          <>
-            <LogOut className="w-4 h-4 mr-2" />
-            Check Out
-          </>
-        ) : (
-          <>
-            <LogIn className="w-4 h-4 mr-2" />
-            Check In
-          </>
-        )}
-      </Button>
-    </Card>
+  return (
+    <Button 
+      size="lg"
+      onClick={handleCheckIn}
+      className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+      data-testid="button-checkin"
+    >
+      <LogIn className="w-4 h-4 mr-2" />
+      Check In Now
+    </Button>
   );
 }
