@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Check, X } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 
 interface LeaveRequest {
   id: string;
@@ -23,32 +22,15 @@ interface PendingLeaveRequestsProps {
 }
 
 export default function PendingLeaveRequests({ requests, onApprove, onReject }: PendingLeaveRequestsProps) {
-  const { toast } = useToast();
-
-  const getInitials = (name: string) => {
+  const getInitials = (name?: string | null) => {
+    if (!name) return "U";
     return name
-      .split(" ")
-      .map(n => n[0])
+      .trim()
+      .split(/\s+/)
+      .map(n => n[0] || '')
       .join("")
       .toUpperCase()
       .slice(0, 2);
-  };
-
-  const handleApprove = (id: string, employee: string) => {
-    toast({
-      title: "Leave Approved",
-      description: `${employee}'s leave request has been approved`,
-    });
-    onApprove?.(id);
-  };
-
-  const handleReject = (id: string, employee: string) => {
-    toast({
-      title: "Leave Rejected",
-      description: `${employee}'s leave request has been rejected`,
-      variant: "destructive",
-    });
-    onReject?.(id);
   };
 
   return (
@@ -78,7 +60,7 @@ export default function PendingLeaveRequests({ requests, onApprove, onReject }: 
                 <div className="flex gap-2">
                   <Button
                     size="sm"
-                    onClick={() => handleApprove(request.id, request.employee)}
+                    onClick={() => onApprove?.(request.id)}
                     data-testid={`button-approve-${request.id}`}
                   >
                     <Check className="w-4 h-4 mr-1" />
@@ -87,7 +69,7 @@ export default function PendingLeaveRequests({ requests, onApprove, onReject }: 
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={() => handleReject(request.id, request.employee)}
+                    onClick={() => onReject?.(request.id)}
                     data-testid={`button-reject-${request.id}`}
                   >
                     <X className="w-4 h-4 mr-1" />

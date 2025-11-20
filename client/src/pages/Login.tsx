@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { Building2 } from "lucide-react";
 import { authAPI } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface LoginProps {
   onLogin: (user: any) => void;
@@ -14,18 +15,19 @@ interface LoginProps {
 
 export default function Login({ onLogin }: LoginProps) {
   const [, setLocation] = useLocation();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
+    if (!username || !password) {
       toast({
         title: "Missing Information",
-        description: "Please enter both email and password",
+        description: "Please enter both username and password",
         variant: "destructive",
       });
       return;
@@ -34,7 +36,10 @@ export default function Login({ onLogin }: LoginProps) {
     setIsLoading(true);
     
     try {
-      const { user } = await authAPI.login(email, password);
+      // Clear any cached data from previous session
+      queryClient.clear();
+      
+      const { user } = await authAPI.login(username, password);
       
       toast({
         title: "Login Successful",
@@ -46,7 +51,7 @@ export default function Login({ onLogin }: LoginProps) {
     } catch (error) {
       toast({
         title: "Login Failed",
-        description: "Invalid credentials. Try admin@company.com / admin123 or john@company.com / john123",
+        description: "Invalid credentials. Please check your username and password.",
         variant: "destructive",
       });
     } finally {
@@ -67,15 +72,15 @@ export default function Login({ onLogin }: LoginProps) {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="username">Username</Label>
             <Input
-              id="email"
-              type="email"
-              placeholder="you@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="username"
+              type="text"
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               disabled={isLoading}
-              data-testid="input-email"
+              data-testid="input-username"
             />
           </div>
 
@@ -104,13 +109,21 @@ export default function Login({ onLogin }: LoginProps) {
 
         <div className="mt-6 p-4 bg-muted/50 rounded-lg">
           <p className="text-sm text-muted-foreground text-center mb-2">
-            <strong>Demo Credentials:</strong>
+            <strong>Demo Accounts:</strong>
           </p>
           <p className="text-xs text-muted-foreground text-center">
-            HR Admin: admin@company.com / admin123
+            Use the username you created during signup
           </p>
-          <p className="text-xs text-muted-foreground text-center">
-            Employee: john@company.com / john123
+        </div>
+
+        <div className="mt-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            Don't have an account?{" "}
+            <Link href="/signup">
+              <span className="text-primary font-medium hover:underline cursor-pointer">
+                Sign up
+              </span>
+            </Link>
           </p>
         </div>
       </Card>

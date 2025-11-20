@@ -1,105 +1,97 @@
 import { useState, useMemo } from "react";
+import { useLocation } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Calendar, Clock, FileText, Plus, Download, Search, TrendingUp, CheckCircle, XCircle, Edit, Trash2, MoreHorizontal } from "lucide-react";
+import { Calendar, Clock, FileText, Plus, Download, Search, TrendingUp, CheckCircle, XCircle, Edit, MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import LeaveRequestDialog from "@/components/LeaveRequestDialog";
-
-const mockLeaveRequests = [
-  { 
-    id: "1", 
-    type: "Vacation", 
-    startDate: "Dec 20, 2025", 
-    endDate: "Dec 25, 2025", 
-    days: 5, 
-    reason: "Holiday vacation",
-    status: "approved" as const,
-    appliedOn: "Nov 01, 2025"
-  },
-  { 
-    id: "2", 
-    type: "Sick Leave", 
-    startDate: "Nov 05, 2025", 
-    endDate: "Nov 06, 2025", 
-    days: 2, 
-    reason: "Medical appointment",
-    status: "pending" as const,
-    appliedOn: "Nov 03, 2025"
-  },
-  { 
-    id: "3", 
-    type: "Personal Leave", 
-    startDate: "Oct 15, 2025", 
-    endDate: "Oct 16, 2025", 
-    days: 2, 
-    reason: "Family event",
-    status: "approved" as const,
-    appliedOn: "Oct 10, 2025"
-  },
-  { 
-    id: "4", 
-    type: "Sick Leave", 
-    startDate: "Sep 10, 2025", 
-    endDate: "Sep 11, 2025", 
-    days: 2, 
-    reason: "Flu recovery",
-    status: "approved" as const,
-    appliedOn: "Sep 08, 2025"
-  },
-  { 
-    id: "5", 
-    type: "Vacation", 
-    startDate: "Aug 05, 2025", 
-    endDate: "Aug 09, 2025", 
-    days: 5, 
-    reason: "Summer vacation",
-    status: "approved" as const,
-    appliedOn: "Jul 15, 2025"
-  },
-  { 
-    id: "6", 
-    type: "Personal Leave", 
-    startDate: "Jul 20, 2025", 
-    endDate: "Jul 20, 2025", 
-    days: 1, 
-    reason: "Personal matters",
-    status: "rejected" as const,
-    appliedOn: "Jul 18, 2025"
-  },
-];
-
-const mockLeaveBalance = [
-  { type: "Sick Leave", used: 3, total: 12 },
-  { type: "Vacation", used: 8, total: 15 },
-  { type: "Personal Leave", used: 2, total: 5 },
-];
+import { useToast } from "@/hooks/use-toast";
 
 export default function Leaves() {
+  const [, navigate] = useLocation();
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [leaveTypeFilter, setLeaveTypeFilter] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
+  const [currentPage, setCurrentPage] = useState(1);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const itemsPerPage = 50;
+
+  // Fetch leave requests with real-time updates
+  const { data: leaveData, isLoading } = useQuery({
+    queryKey: ['leave-requests'],
+    queryFn: async () => {
+      const response = await fetch('/api/leave/requests', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch leave requests');
+      return response.json();
+    },
+    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchOnWindowFocus: true,
+  });
+
+  // Fetch leave balance with real-time updates
+  const { data: balanceData } = useQuery({
+    queryKey: ['leave-balance'],
+    queryFn: async () => {
+      const response = await fetch('/api/leave/balance', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch leave balance');
+      return response.json();
+    },
+    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchOnWindowFocus: true,
+  });
+
+  // Fetch system settings for fallbacks
+  const { data: settings } = useQuery({
+    queryKey: ['system-settings'],
+    queryFn: async () => {
+      const response = await fetch('/api/settings');
+      if (!response.ok) throw new Error('Failed to fetch settings');
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const leaveRequests = leaveData?.leaves || [];
+  const balance = balanceData?.balance || {};
+
+  // Only show skeleton on initial load, not on refetch
+  const showLoading = isLoading && !leaveData;
+
+  const defaultSick = settings?.defaultSickLeave ?? 12;
+  const defaultVacation = settings?.defaultVacationLeave ?? 15;
+  const defaultPersonal = settings?.defaultPersonalLeave ?? 5;
+
+  const mockLeaveBalance = [
+    { type: "Sick Leave", used: balance.sickLeave?.used ?? 0, total: balance.sickLeave?.total ?? defaultSick },
+    { type: "Vacation", used: balance.vacation?.used ?? 0, total: balance.vacation?.total ?? defaultVacation },
+    { type: "Personal Leave", used: balance.personalLeave?.used ?? 0, total: balance.personalLeave?.total ?? defaultPersonal },
+  ];
 
   const filteredRequests = useMemo(() => {
-    let filtered = mockLeaveRequests;
+    let filtered = leaveRequests;
 
     // Status filter
     if (filter !== "all") {
-      filtered = filtered.filter(req => req.status === filter);
+      filtered = filtered.filter((req: any) => req.status === filter);
     }
 
     // Leave type filter
     if (leaveTypeFilter !== "all") {
-      filtered = filtered.filter(req => req.type === leaveTypeFilter);
+      filtered = filtered.filter((req: any) => req.type === leaveTypeFilter);
     }
 
     // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(req =>
+      filtered = filtered.filter((req: any) =>
         req.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
         req.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
         req.startDate.toLowerCase().includes(searchTerm.toLowerCase())
@@ -114,20 +106,34 @@ export default function Leaves() {
     }
 
     return filtered;
-  }, [filter, searchTerm, leaveTypeFilter, sortBy]);
+  }, [leaveRequests, filter, searchTerm, leaveTypeFilter, sortBy]);
+
+  // Paginated data
+  const paginatedRequests = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredRequests.slice(startIndex, endIndex);
+  }, [filteredRequests, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
+
+  // Reset to page 1 when filters change
+  useMemo(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filter, leaveTypeFilter, sortBy]);
 
   // Calculate statistics
   const stats = useMemo(() => {
-    const totalRequests = mockLeaveRequests.length;
-    const approvedCount = mockLeaveRequests.filter(r => r.status === "approved").length;
-    const pendingCount = mockLeaveRequests.filter(r => r.status === "pending").length;
-    const rejectedCount = mockLeaveRequests.filter(r => r.status === "rejected").length;
-    const totalDaysUsed = mockLeaveRequests
-      .filter(r => r.status === "approved")
-      .reduce((acc, r) => acc + r.days, 0);
+    const totalRequests = leaveRequests.length;
+    const approvedCount = leaveRequests.filter((r: any) => r.status === "approved").length;
+    const pendingCount = leaveRequests.filter((r: any) => r.status === "pending").length;
+    const rejectedCount = leaveRequests.filter((r: any) => r.status === "rejected").length;
+    const totalDaysUsed = leaveRequests
+      .filter((r: any) => r.status === "approved")
+      .reduce((acc: number, r: any) => acc + r.days, 0);
     
     return { totalRequests, approvedCount, pendingCount, rejectedCount, totalDaysUsed };
-  }, []);
+  }, [leaveRequests]);
 
   const handleCancelRequest = (id: string) => {
     console.log("Cancel request:", id);
@@ -139,14 +145,37 @@ export default function Leaves() {
     // TODO: Implement edit logic
   };
 
-  const handleDeleteRequest = (id: string) => {
-    console.log("Delete request:", id);
-    // TODO: Implement delete logic
-  };
-
   const handleExport = () => {
-    console.log("Export leave data");
-    // TODO: Implement export logic
+    // Prepare CSV data
+    const headers = ['Leave Type', 'Start Date', 'End Date', 'Days', 'Reason', 'Applied On', 'Status'];
+    const csvData = filteredRequests.map((request: any) => [
+      request.type,
+      request.startDate,
+      request.endDate,
+      request.days,
+      request.reason,
+      request.appliedOn,
+      request.status
+    ]);
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map((row: any[]) => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `leave_requests_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getStatusColor = (status: string) => {
@@ -180,7 +209,14 @@ export default function Leaves() {
       </div>
 
       {/* Leave Balance & Stats - Hero Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {showLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {Array(4).fill(0).map((_, i) => (
+            <Skeleton key={i} className="h-48" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {mockLeaveBalance.map((leave, index) => (
           <Card key={index} className="border shadow-sm">
             <div className="p-8">
@@ -213,7 +249,8 @@ export default function Leaves() {
             <p className="text-sm text-muted-foreground">used this year</p>
           </div>
         </Card>
-      </div>
+        </div>
+      )}
 
       {/* Leave History - Combined Filter & Table */}
       <Card className="border shadow-sm">
@@ -324,8 +361,11 @@ export default function Leaves() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRequests.map((request) => (
-                <TableRow key={request.id} className="hover:bg-muted/50">
+              {paginatedRequests.map((request) => (
+                <TableRow
+                  key={request.id}
+                  className="hover:bg-muted/50"
+                >
                   <TableCell className="font-medium">{request.type}</TableCell>
                   <TableCell>{request.startDate}</TableCell>
                   <TableCell>{request.endDate}</TableCell>
@@ -342,7 +382,10 @@ export default function Leaves() {
                       <span className="text-sm capitalize">{request.status}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell
+                    className="text-right"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -350,6 +393,9 @@ export default function Leaves() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate(`/leaves/${request.id}`)}>
+                          View Detail
+                        </DropdownMenuItem>
                         {request.status === "pending" && (
                           <>
                             <DropdownMenuItem onClick={() => handleEditRequest(request.id)}>
@@ -364,13 +410,6 @@ export default function Leaves() {
                             </DropdownMenuItem>
                           </>
                         )}
-                        <DropdownMenuItem 
-                          onClick={() => handleDeleteRequest(request.id)}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -378,6 +417,78 @@ export default function Leaves() {
               ))}
             </TableBody>
           </Table>
+        )}
+
+        {/* Pagination */}
+        {filteredRequests.length > 0 && totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t">
+            <div className="text-sm text-muted-foreground">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredRequests.length)} of {filteredRequests.length} requests
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {currentPage > 2 && (
+                  <>
+                    <Button
+                      variant={currentPage === 1 ? "default" : "outline"}
+                      size="sm"
+                      className="w-9 h-9 p-0"
+                      onClick={() => setCurrentPage(1)}
+                    >
+                      1
+                    </Button>
+                    {currentPage > 3 && <span className="text-muted-foreground px-1">...</span>}
+                  </>
+                )}
+                {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+                  const pageNum = currentPage === 1 ? i + 1 : 
+                                 currentPage === totalPages ? totalPages - 2 + i :
+                                 currentPage - 1 + i;
+                  if (pageNum < 1 || pageNum > totalPages) return null;
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      className="w-9 h-9 p-0"
+                      onClick={() => setCurrentPage(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+                {currentPage < totalPages - 1 && (
+                  <>
+                    {currentPage < totalPages - 2 && <span className="text-muted-foreground px-1">...</span>}
+                    <Button
+                      variant={currentPage === totalPages ? "default" : "outline"}
+                      size="sm"
+                      className="w-9 h-9 p-0"
+                      onClick={() => setCurrentPage(totalPages)}
+                    >
+                      {totalPages}
+                    </Button>
+                  </>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         )}
       </Card>
 

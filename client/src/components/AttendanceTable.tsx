@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
+import { useLocation } from "wouter";
 
 interface AttendanceRecord {
   id: string;
@@ -19,6 +20,16 @@ interface AttendanceTableProps {
 }
 
 export default function AttendanceTable({ records }: AttendanceTableProps) {
+  const [, navigate] = useLocation();
+
+  const handleRequestCorrection = (record: AttendanceRecord) => {
+    navigate(`/attendance/correction/${record.id}`);
+  };
+
+  const handleAddNote = (record: AttendanceRecord) => {
+    navigate(`/attendance/correction/${record.id}?tab=note`);
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "present":
@@ -35,7 +46,7 @@ export default function AttendanceTable({ records }: AttendanceTableProps) {
   };
 
   return (
-    
+    <>
       <Table>
         <TableHeader>
           <TableRow>
@@ -74,9 +85,12 @@ export default function AttendanceTable({ records }: AttendanceTableProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>View Details</DropdownMenuItem>
-                    <DropdownMenuItem>Request Correction</DropdownMenuItem>
-                    <DropdownMenuItem>Add Note</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleRequestCorrection(record)}>
+                      Correction
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAddNote(record)}>
+                      Add Note
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
@@ -84,5 +98,6 @@ export default function AttendanceTable({ records }: AttendanceTableProps) {
           ))}
         </TableBody>
       </Table>
+    </>
   );
 }

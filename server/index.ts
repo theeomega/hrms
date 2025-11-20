@@ -1,8 +1,13 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { registerMongoRoutes } from "./routes-mongo";
 import { setupVite, serveStatic, log } from "./vite";
+import { connectDB } from "./config/mongodb";
 
 const app = express();
+
+// Connect to MongoDB
+connectDB();
 
 declare module 'http' {
   interface IncomingMessage {
@@ -47,7 +52,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  // Use MongoDB routes instead of old routes
+  const server = await registerMongoRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

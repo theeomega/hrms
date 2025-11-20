@@ -1,7 +1,9 @@
 import EventCalendar from "@/components/EventCalendar";
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import AttendanceTable from "@/components/AttendanceTable";
 import { UserCheck, Clock, TrendingUp, Calendar as CalendarIcon, Search, Download, PlusCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,35 +11,56 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 
-const mockAttendance = [
-  { id: "1", date: "Nov 03, 2025", checkIn: "09:00 AM", checkOut: "05:30 PM", hours: "8.5", status: "present" as const },
-  { id: "2", date: "Nov 02, 2025", checkIn: "09:15 AM", checkOut: "05:45 PM", hours: "8.5", status: "late" as const },
-  { id: "3", date: "Nov 01, 2025", checkIn: "09:00 AM", checkOut: "05:00 PM", hours: "8.0", status: "present" as const },
-  { id: "4", date: "Oct 31, 2025", checkIn: "08:55 AM", checkOut: "05:15 PM", hours: "8.3", status: "present" as const },
-  { id: "5", date: "Oct 30, 2025", checkIn: "09:30 AM", checkOut: "06:00 PM", hours: "8.5", status: "late" as const },
-  { id: "6", date: "Oct 29, 2025", checkIn: "09:05 AM", checkOut: "05:20 PM", hours: "8.2", status: "present" as const },
-  { id: "7", date: "Oct 28, 2025", checkIn: "-", checkOut: "-", hours: "0.0", status: "absent" as const },
-  { id: "8", date: "Oct 27, 2025", checkIn: "-", checkOut: "-", hours: "8.0", status: "leave" as const },
-];
-
 export default function Attendance() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [filterPeriod, setFilterPeriod] = useState("month");
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Fetch attendance records with real-time updates
+  const { data: attendanceData, isLoading } = useQuery({
+    queryKey: ['attendance-records'],
+    queryFn: async () => {
+      const response = await fetch('/api/attendance?limit=50', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch attendance');
+      return response.json();
+    },
+    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchOnWindowFocus: true,
+  });
+
+  // Fetch dashboard stats for summary with real-time updates
+  const { data: statsData } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: async () => {
+      const response = await fetch('/api/dashboard/stats', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch stats');
+      return response.json();
+    },
+    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchOnWindowFocus: true,
+  });
+
+  const records = attendanceData?.records || [];
+  const stats = statsData || {}; // stats are returned directly, not nested
+
+  // Only show skeleton on initial load, not on refetch
+  const showLoading = isLoading && !attendanceData;
+
   const filteredAttendance = useMemo(() => {
-    return mockAttendance.filter(record =>
+    const filtered = records.filter((record: any) =>
       record.date.toLowerCase().includes(searchTerm.toLowerCase()) ||
       record.status.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [searchTerm]);
+    // Show only 8 latest records
+    return filtered.slice(0, 8);
+  }, [records, searchTerm]);
 
   // Quick derived summary for the calendar card to avoid negative whitespace
-  const presentCount = filteredAttendance.filter((r) => r.status === "present").length;
-  const lateCount = filteredAttendance.filter((r) => r.status === "late").length;
-  const absentCount = filteredAttendance.filter((r) => r.status === "absent").length;
-  const leaveCount = filteredAttendance.filter((r) => r.status === "leave").length;
-  const totalHours = filteredAttendance.reduce((acc, r) => acc + (parseFloat(String(r.hours)) || 0), 0);
+  const presentCount = filteredAttendance.filter((r: any) => r.status === "present").length;
+  const lateCount = filteredAttendance.filter((r: any) => r.status === "late").length;
+  const absentCount = filteredAttendance.filter((r: any) => r.status === "absent").length;
+  const leaveCount = filteredAttendance.filter((r: any) => r.status === "leave").length;
+  const totalHours = filteredAttendance.reduce((acc: number, r: any) => acc + (parseFloat(String(r.hours)) || 0), 0);
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-12">
@@ -64,14 +87,21 @@ export default function Attendance() {
       </div>
 
       {/* Attendance Stats - Hero Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {showLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {Array(4).fill(0).map((_, i) => (
+            <Skeleton key={i} className="h-48" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Days Present Card */}
         <Card className="border shadow-sm">
           <div className="p-8">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Days Present</p>
-                <p className="text-4xl font-bold">22</p>
+                <p className="text-4xl font-bold">{stats.presentDays || 0}</p>
               </div>
               <div className="w-16 h-16 rounded-2xl  flex items-center justify-center">
                 <UserCheck className="w-8 h-8 text-muted-foreground" />
@@ -87,7 +117,7 @@ export default function Attendance() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Total Hours</p>
-                <p className="text-4xl font-bold">180</p>
+                <p className="text-4xl font-bold">{stats.totalHours?.toFixed(1) || '0.0'}</p>
               </div>
               <div className="w-16 h-16 rounded-2xl  flex items-center justify-center">
                 <Clock className="w-8 h-8 text-muted-foreground" />
@@ -103,16 +133,20 @@ export default function Attendance() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Avg Hours/Day</p>
-                <p className="text-4xl font-bold">8.2</p>
+                <p className="text-4xl font-bold">{stats.avgHours?.toFixed(1) || '0.0'}</p>
               </div>
               <div className="w-16 h-16 rounded-2xl  flex items-center justify-center">
                 <TrendingUp className="w-8 h-8 text-muted-foreground" />
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-green-600">↑ 0.3</span>
-              <span className="text-muted-foreground">vs last month</span>
-            </div>
+            {stats.avgHoursDiff !== undefined && stats.avgHoursDiff !== 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className={stats.avgHoursDiff > 0 ? "text-green-600" : "text-red-600"}>
+                  {stats.avgHoursDiff > 0 ? '↑' : '↓'} {Math.abs(stats.avgHoursDiff).toFixed(1)}
+                </span>
+                <span className="text-muted-foreground">vs last month</span>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -122,19 +156,24 @@ export default function Attendance() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Attendance Rate</p>
-                <p className="text-4xl font-bold">95%</p>
+                <p className="text-4xl font-bold">{stats.attendanceRate || 0}%</p>
               </div>
               <div className="w-16 h-16 rounded-2xl  flex items-center justify-center">
                 <CalendarIcon className="w-8 h-8 text-muted-foreground" />
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-green-600">↑ 3%</span>
-              <span className="text-muted-foreground">improvement</span>
-            </div>
+            {stats.attendanceRateDiff !== undefined && stats.attendanceRateDiff !== 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className={stats.attendanceRateDiff > 0 ? "text-green-600" : "text-red-600"}>
+                  {stats.attendanceRateDiff > 0 ? '↑' : '↓'} {Math.abs(stats.attendanceRateDiff).toFixed(1)}%
+                </span>
+                <span className="text-muted-foreground">vs last month</span>
+              </div>
+            )}
           </div>
         </Card>
-      </div>
+        </div>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -180,47 +219,7 @@ export default function Attendance() {
 
         {/* Right Column: Attendance Records (takes 3/5 width on large screens) */}
         <div className="space-y-6 lg:col-span-3">
-          <Card className="border shadow-sm">
-            <div className="p-6">
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="text-lg font-semibold">Recent Records</h2>
-                <div className="flex items-center gap-2">
-                  <div className="relative w-full max-w-xs">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search by date or status..." 
-                      className="pl-10"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                  <Select value={filterPeriod} onValueChange={setFilterPeriod}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="week">This Week</SelectItem>
-                      <SelectItem value="month">This Month</SelectItem>
-                      <SelectItem value="quarter">This Quarter</SelectItem>
-                      <SelectItem value="year">This Year</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button variant="outline" size="sm" className="h-9 gap-1">
-                    <Download className="h-3.5 w-3.5" />
-                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                      Export
-                    </span>
-                  </Button>
-                  <Button size="sm" className="h-9 gap-1">
-                    <PlusCircle className="h-3.5 w-3.5" />
-                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                      Add Entry
-                    </span>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Card>
+          
           <Card className="border shadow-sm">
             <div className="p-6 flex items-center justify-between">
               <h2 className="text-lg font-semibold">Attendance History</h2>
@@ -231,7 +230,10 @@ export default function Attendance() {
               </Link>
             </div>
             <div className="p-6 pt-0">
-              <AttendanceTable records={filteredAttendance} />
+              {/* Fixed height scroll area (~8 rows). Assuming average row height ~48-52px plus header. */}
+              <div className="max-h-[460px] overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent">
+                <AttendanceTable records={filteredAttendance} />
+              </div>
             </div>
           </Card>
         </div>

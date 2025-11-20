@@ -1,32 +1,17 @@
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, Download, Calendar, TrendingUp, Clock } from "lucide-react";
-import { Link } from "wouter";
+import { ArrowLeft, Search, Download, Calendar, TrendingUp, Clock, MoreHorizontal } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-// Extended mock data for history
-const mockAttendanceHistory = [
-  { id: "1", date: "Nov 03, 2025", checkIn: "09:00 AM", checkOut: "05:30 PM", hours: 8.5, status: "present" as const, month: "Nov" },
-  { id: "2", date: "Nov 02, 2025", checkIn: "09:15 AM", checkOut: "05:45 PM", hours: 8.5, status: "late" as const, month: "Nov" },
-  { id: "3", date: "Nov 01, 2025", checkIn: "09:00 AM", checkOut: "05:00 PM", hours: 8.0, status: "present" as const, month: "Nov" },
-  { id: "4", date: "Oct 31, 2025", checkIn: "08:55 AM", checkOut: "05:15 PM", hours: 8.3, status: "present" as const, month: "Oct" },
-  { id: "5", date: "Oct 30, 2025", checkIn: "09:30 AM", checkOut: "06:00 PM", hours: 8.5, status: "late" as const, month: "Oct" },
-  { id: "6", date: "Oct 29, 2025", checkIn: "09:05 AM", checkOut: "05:20 PM", hours: 8.2, status: "present" as const, month: "Oct" },
-  { id: "7", date: "Oct 28, 2025", checkIn: "-", checkOut: "-", hours: 0, status: "absent" as const, month: "Oct" },
-  { id: "8", date: "Oct 27, 2025", checkIn: "-", checkOut: "-", hours: 8.0, status: "leave" as const, month: "Oct" },
-  { id: "9", date: "Oct 26, 2025", checkIn: "09:00 AM", checkOut: "05:30 PM", hours: 8.5, status: "present" as const, month: "Oct" },
-  { id: "10", date: "Oct 25, 2025", checkIn: "09:10 AM", checkOut: "05:45 PM", hours: 8.6, status: "late" as const, month: "Oct" },
-  { id: "11", date: "Sep 30, 2025", checkIn: "09:00 AM", checkOut: "05:00 PM", hours: 8.0, status: "present" as const, month: "Sep" },
-  { id: "12", date: "Sep 29, 2025", checkIn: "09:00 AM", checkOut: "05:30 PM", hours: 8.5, status: "present" as const, month: "Sep" },
-  { id: "13", date: "Sep 28, 2025", checkIn: "-", checkOut: "-", hours: 8.0, status: "leave" as const, month: "Sep" },
-  { id: "14", date: "Sep 27, 2025", checkIn: "09:20 AM", checkOut: "05:50 PM", hours: 8.5, status: "late" as const, month: "Sep" },
-  { id: "15", date: "Sep 26, 2025", checkIn: "09:00 AM", checkOut: "05:15 PM", hours: 8.2, status: "present" as const, month: "Sep" },
-];
 
 const COLORS = {
   present: "#10b981",
@@ -39,24 +24,64 @@ export default function AttendanceHistory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterMonth, setFilterMonth] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [, navigate] = useLocation();
+
+  const itemsPerPage = 50;
+
+  // Fetch attendance records with real-time updates
+  const { data: attendanceData, isLoading } = useQuery({
+    queryKey: ['attendance-history'],
+    queryFn: async () => {
+      const response = await fetch('/api/attendance?limit=100', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch attendance');
+      return response.json();
+    },
+    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchOnWindowFocus: true,
+  });
+
+  const attendanceHistory = attendanceData?.records || [];
+
+  // Only show skeleton on initial load, not on refetch
+  const showLoading = isLoading && !attendanceData;
 
   const filteredData = useMemo(() => {
-    return mockAttendanceHistory.filter(record => {
-      const matchesSearch = record.date.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    return attendanceHistory.filter((record: any) => {
+      const dateStr = new Date(record.date).toLocaleDateString();
+      const matchesSearch = dateStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            record.status.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = filterStatus === "all" || record.status === filterStatus;
-      const matchesMonth = filterMonth === "all" || record.month === filterMonth;
+      const recordMonth = new Date(record.date).toLocaleDateString('en-US', { month: 'short' });
+      const matchesMonth = filterMonth === "all" || recordMonth === filterMonth;
       return matchesSearch && matchesStatus && matchesMonth;
     });
+  }, [attendanceHistory, searchTerm, filterStatus, filterMonth]);
+
+  // Paginated data
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredData.slice(startIndex, endIndex);
+  }, [filteredData, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+
+  // Reset to page 1 when filters change
+  useMemo(() => {
+    setCurrentPage(1);
   }, [searchTerm, filterStatus, filterMonth]);
 
   // Calculate stats
   const stats = useMemo(() => {
-    const present = filteredData.filter(r => r.status === "present").length;
-    const late = filteredData.filter(r => r.status === "late").length;
-    const absent = filteredData.filter(r => r.status === "absent").length;
-    const leave = filteredData.filter(r => r.status === "leave").length;
-    const totalHours = filteredData.reduce((acc, r) => acc + r.hours, 0);
+    const present = filteredData.filter((r: any) => r.status === "present").length;
+    const late = filteredData.filter((r: any) => r.status === "late").length;
+    const absent = filteredData.filter((r: any) => r.status === "absent").length;
+    const leave = filteredData.filter((r: any) => r.status === "leave").length;
+    const totalHours = filteredData.reduce((acc: number, r: any) => {
+      const hours = parseFloat(r.hours) || 0;
+      return acc + hours;
+    }, 0);
     const avgHours = filteredData.length > 0 ? totalHours / filteredData.length : 0;
     
     return { present, late, absent, leave, totalHours, avgHours };
@@ -71,27 +96,28 @@ export default function AttendanceHistory() {
   ].filter(item => item.value > 0);
 
   // Line chart data - hours per day
-  const lineData = filteredData.slice(0, 10).reverse().map(record => ({
-    date: record.date.split(",")[0],
-    hours: record.hours,
+  const lineData = filteredData.slice(0, 10).reverse().map((record: any) => ({
+    date: new Date(record.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    hours: parseFloat(record.hours) || 0,
   }));
 
   // Bar chart data - status count by month
   const barData = useMemo(() => {
     const monthData: { [key: string]: { present: number; late: number; absent: number; leave: number } } = {};
     
-    mockAttendanceHistory.forEach(record => {
-      if (!monthData[record.month]) {
-        monthData[record.month] = { present: 0, late: 0, absent: 0, leave: 0 };
+    attendanceHistory.forEach((record: any) => {
+      const month = new Date(record.date).toLocaleDateString('en-US', { month: 'short' });
+      if (!monthData[month]) {
+        monthData[month] = { present: 0, late: 0, absent: 0, leave: 0 };
       }
-      monthData[record.month][record.status]++;
+      monthData[month][record.status as keyof typeof monthData[string]]++;
     });
 
     return Object.entries(monthData).map(([month, data]) => ({
       month,
       ...data,
     }));
-  }, []);
+  }, [attendanceHistory]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -127,6 +153,77 @@ export default function AttendanceHistory() {
         return <span className="text-sm">{status}</span>;
     }
   };
+
+  const handleExport = () => {
+    // Prepare CSV data
+    const headers = ['Date', 'Check In', 'Check Out', 'Hours', 'Status'];
+    const csvData = filteredData.map((record: any) => [
+      record.date,
+      record.checkIn || '-',
+      record.checkOut || '-',
+      record.hours || '0.0',
+      record.status
+    ]);
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map((row: string[]) => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `attendance_history_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  if (showLoading) {
+    return (
+      <div className="max-w-[1600px] mx-auto space-y-8">
+        <div className="relative">
+          <div className="absolute top-0 right-0 w-64 h-32 bg-gradient-to-bl from-primary/5 to-transparent rounded-full blur-3xl" />
+          <div className="relative flex items-start justify-between">
+            <div className="space-y-1">
+              <Link href="/attendance">
+                <Button variant="ghost" size="sm" className="mb-2 -ml-2">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Attendance
+                </Button>
+              </Link>
+              <div className="flex items-baseline gap-3">
+                <h1 className="text-5xl font-light tracking-tight">Attendance</h1>
+                <span className="text-5xl font-bold">History</span>
+              </div>
+              <p className="text-muted-foreground text-lg ml-1">
+                Complete attendance records and analytics
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {Array(4).fill(0).map((_, i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Skeleton className="h-96" />
+          <Skeleton className="h-96" />
+        </div>
+
+        <Skeleton className="h-96" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-8">
@@ -303,7 +400,7 @@ export default function AttendanceHistory() {
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold">All Records</h3>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
@@ -346,38 +443,129 @@ export default function AttendanceHistory() {
           </div>
 
           {/* Table */}
-          <div className="rounded-md border">
+          <div>
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Check In</TableHead>
-                  <TableHead>Check Out</TableHead>
-                  <TableHead>Hours</TableHead>
-                  <TableHead>Status</TableHead>
+                <TableRow className="border-b">
+                  <TableHead className="border-0">Date</TableHead>
+                  <TableHead className="border-0">Check In</TableHead>
+                  <TableHead className="border-0">Check Out</TableHead>
+                  <TableHead className="border-0">Hours</TableHead>
+                  <TableHead className="border-0">Status</TableHead>
+                  <TableHead className="text-right w-[100px] border-0">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredData.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableRow className="border-b">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground border-0">
                       No records found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredData.map((record) => (
-                    <TableRow key={record.id}>
-                      <TableCell className="font-medium">{record.date}</TableCell>
-                      <TableCell>{record.checkIn}</TableCell>
-                      <TableCell>{record.checkOut}</TableCell>
-                      <TableCell>{record.hours.toFixed(1)}</TableCell>
-                      <TableCell>{getStatusBadge(record.status)}</TableCell>
+                  paginatedData.map((record: any) => (
+                    <TableRow key={record._id || record.id} className="border-b">
+                      <TableCell className="font-medium border-0">{record.date}</TableCell>
+                      <TableCell className="border-0">{record.checkIn || '-'}</TableCell>
+                      <TableCell className="border-0">{record.checkOut || '-'}</TableCell>
+                      <TableCell className="border-0">{record.hours || '0.0'}</TableCell>
+                      <TableCell className="border-0">{getStatusBadge(record.status)}</TableCell>
+                      <TableCell className="text-right border-0">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => navigate(`/attendance/correction/${record.id || record._id}`)}>
+                              Correction
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/attendance/correction/${record.id || record._id}?tab=note`)}>
+                              Add Note
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination */}
+          {filteredData.length > 0 && totalPages > 1 && (
+            <div className="flex items-center justify-between px-2 py-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length} records
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {currentPage > 2 && (
+                    <>
+                      <Button
+                        variant={currentPage === 1 ? "default" : "outline"}
+                        size="sm"
+                        className="w-9 h-9 p-0"
+                        onClick={() => setCurrentPage(1)}
+                      >
+                        1
+                      </Button>
+                      {currentPage > 3 && <span className="text-muted-foreground px-1">...</span>}
+                    </>
+                  )}
+                  {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+                    const pageNum = currentPage === 1 ? i + 1 : 
+                                   currentPage === totalPages ? totalPages - 2 + i :
+                                   currentPage - 1 + i;
+                    if (pageNum < 1 || pageNum > totalPages) return null;
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        className="w-9 h-9 p-0"
+                        onClick={() => setCurrentPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                  {currentPage < totalPages - 1 && (
+                    <>
+                      {currentPage < totalPages - 2 && <span className="text-muted-foreground px-1">...</span>}
+                      <Button
+                        variant={currentPage === totalPages ? "default" : "outline"}
+                        size="sm"
+                        className="w-9 h-9 p-0"
+                        onClick={() => setCurrentPage(totalPages)}
+                      >
+                        {totalPages}
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
     </div>

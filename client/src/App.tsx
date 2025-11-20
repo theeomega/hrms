@@ -1,23 +1,34 @@
 import { useState, useEffect } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import Login from "@/pages/Login";
+import Signup from "@/pages/Signup";
 import Dashboard from "@/pages/Dashboard";
 import Employees from "@/pages/Employees";
+import EmployeeDetail from './pages/EmployeeDetail';
 import Attendance from "@/pages/Attendance";
 import AttendanceHistory from "@/pages/AttendanceHistory";
+import AttendanceCorrection from "@/pages/AttendanceCorrection";
+import AttendanceCorrectionManagement from "@/pages/AttendanceCorrectionManagement";
+import AttendanceCorrectionDetail from "@/pages/AttendanceCorrectionDetail";
+import ActivityHistory from "@/pages/ActivityHistory";
 import LeaveRequests from "@/pages/LeaveRequests";
+import LeaveRequestDetail from "@/pages/LeaveRequestDetail";
 import Leaves from "@/pages/Leaves";
 import Profile from "@/pages/Profile";
 import Notifications from "@/pages/Notifications";
 import Reports from "@/pages/Reports";
+import AdminSettings from "@/pages/AdminSettings";
+import Messages from "@/pages/Messages";
 import NotFound from "@/pages/not-found";
+import Settings from "@/pages/Settings";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Moon, Sun } from "lucide-react";
 import { authAPI } from "@/lib/api";
 import type { User } from "@shared/schema";
@@ -49,7 +60,8 @@ interface AuthenticatedAppProps {
 }
 
 function AuthenticatedApp({ user, onLogout }: AuthenticatedAppProps) {
-  const isHRAdmin = user.role === "hr_admin";
+  const isHRAdmin = user.role === "admin" || user.role === "hr_admin";
+  const queryClient = useQueryClient();
 
   const style = {
     "--sidebar-width": "16rem",
@@ -58,9 +70,13 @@ function AuthenticatedApp({ user, onLogout }: AuthenticatedAppProps) {
   const handleLogout = async () => {
     try {
       await authAPI.logout();
+      // Clear all React Query cache on logout
+      queryClient.clear();
       onLogout();
     } catch (error) {
       console.error("Logout failed:", error);
+      // Clear cache even if logout fails
+      queryClient.clear();
       onLogout(); // Logout anyway
     }
   };
@@ -68,36 +84,47 @@ function AuthenticatedApp({ user, onLogout }: AuthenticatedAppProps) {
   return (
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
-        <AppSidebar isHRAdmin={isHRAdmin} />
+        <AppSidebar isHRAdmin={isHRAdmin} onLogout={handleLogout} />
         <div className="flex flex-col flex-1">
-          <header className="flex items-center justify-between p-4 border-b">
+          <header className="flex items-center justify-between p-4 border-b bg-background">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                {user.username} {isHRAdmin && "(Admin)"}
-              </span>
+            <div className="flex items-center gap-4">
               <ThemeToggle />
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleLogout}
-                data-testid="button-logout"
-              >
-                Logout
-              </Button>
+              <div className="flex items-center gap-3 pl-4 border-l">
+                <div className="text-right hidden md:block">
+                  <p className="text-sm font-medium leading-none">{user.username}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{isHRAdmin ? 'Admin' : 'Employee'}</p>
+                </div>
+                <Avatar className="h-9 w-9">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                    {user.username.substring(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
             </div>
           </header>
           <main className="flex-1 overflow-auto p-6 bg-muted/30">
             <Switch>
               <Route path="/" component={() => <Dashboard isHRAdmin={isHRAdmin} />} />
-              <Route path="/employees" component={Employees} />
+              {isHRAdmin && <Route path="/employees" component={Employees} />}
+              <Route path="/employees/:id" component={EmployeeDetail} />
               <Route path="/attendance" component={Attendance} />
               <Route path="/attendance/history" component={AttendanceHistory} />
+              <Route path="/attendance/correction/:id?" component={AttendanceCorrection} />
+              {isHRAdmin && <Route path="/attendance/corrections/:id" component={AttendanceCorrectionDetail} />}
+              {isHRAdmin && <Route path="/attendance/corrections" component={AttendanceCorrectionManagement} />}
+              <Route path="/activity" component={ActivityHistory} />
               <Route path="/leaves" component={Leaves} />
-              <Route path="/leave-requests" component={LeaveRequests} />
-              <Route path="/reports" component={Reports} />
+              <Route path="/leaves/:id" component={LeaveRequestDetail} />
+              {isHRAdmin && <Route path="/leave-requests/:id" component={LeaveRequestDetail} />}
+              {isHRAdmin && <Route path="/leave-requests" component={LeaveRequests} />}
+              {isHRAdmin && <Route path="/reports" component={Reports} />}
+              {isHRAdmin && <Route path="/admin/settings" component={AdminSettings} />}
+              <Route path="/settings" component={Settings} />
+              <Route path="/messages" component={Messages} />
               <Route path="/notifications" component={Notifications} />
               <Route path="/profile" component={Profile} />
+              <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
           </main>
@@ -134,6 +161,9 @@ function Router() {
     <Switch>
       <Route path="/login">
         <Login onLogin={(loggedInUser) => setUser(loggedInUser)} />
+      </Route>
+      <Route path="/signup">
+        <Signup />
       </Route>
       <Route path="*">
         {user ? (

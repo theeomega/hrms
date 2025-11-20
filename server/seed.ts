@@ -1,221 +1,66 @@
-import { db } from "./db";
-import { eq } from "drizzle-orm";
-import { 
-  users, 
-  employees, 
-  attendance, 
-  leaveRequests, 
-  notifications, 
-  leaveBalances 
-} from "@shared/schema";
+import mongoose from 'mongoose';
+import { connectDB } from './config/mongodb';
+import Department from './models/DepartmentModel';
+import Zone from './models/ZoneModel';
+import Role from './models/RoleModel';
 
-async function seed() {
-  console.log("🌱 Seeding database...");
+const seedOrgData = async () => {
+  await connectDB();
 
   try {
-    // Create employees first
-    const emp1Id = crypto.randomUUID();
-    const emp2Id = crypto.randomUUID();
-    const emp3Id = crypto.randomUUID();
-
-    await db.insert(employees).values([
-      {
-        id: emp1Id,
-        name: "John Doe",
-        email: "john@company.com",
-        phone: "+1234567890",
-        role: "Senior Developer",
-        department: "Engineering",
-        location: "New York",
-        employeeId: "EMP001",
-        status: "active",
-        joinDate: "2023-01-15",
-      },
-      {
-        id: emp2Id,
-        name: "Jane Smith",
-        email: "jane@company.com",
-        phone: "+1234567891",
-        role: "Marketing Manager",
-        department: "Marketing",
-        location: "Los Angeles",
-        employeeId: "EMP002",
-        status: "active",
-        joinDate: "2023-03-01",
-      },
-      {
-        id: emp3Id,
-        name: "Admin User",
-        email: "admin@company.com",
-        phone: "+1234567892",
-        role: "HR Manager",
-        department: "Human Resources",
-        location: "New York",
-        employeeId: "EMP003",
-        status: "active",
-        joinDate: "2022-01-01",
-      },
-    ]);
-
-    console.log("✅ Employees created");
-
-    // Create users (admin and employee) - passwords are stored in plaintext for simplicity
-    await db.insert(users).values([
-      {
-        id: crypto.randomUUID(),
-        username: "admin@company.com",
-        password: "admin123",
-        role: "hr_admin",
-        employeeId: emp3Id,
-      },
-      {
-        id: crypto.randomUUID(),
-        username: "john@company.com",
-        password: "john123",
-        role: "employee",
-        employeeId: emp1Id,
-      },
-    ]);
-
-    console.log("✅ Users created");
-    console.log("   📧 admin@company.com / admin123");
-    console.log("   📧 john@company.com / john123");
-
-    // Create some sample attendance records
-    const today = new Date();
-    const dates = [];
-    for (let i = 0; i < 10; i++) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      dates.push(date.toISOString().split("T")[0]);
-    }
-
-    const attendanceRecords = dates.map((dateStr, i) => {
-      const checkIn = new Date(dateStr + "T09:00:00");
-      checkIn.setMinutes(i * 2);
-      const checkOut = new Date(dateStr + "T18:00:00");
-      checkOut.setMinutes(i * 2);
-      
-      return {
-        id: crypto.randomUUID(),
-        employeeId: emp1Id,
-        date: dateStr,
-        checkIn: checkIn,
-        checkOut: checkOut,
-        status: i % 5 === 0 ? "late" : "present",
-        hoursWorked: "9h",
-      };
-    });
-
-    await db.insert(attendance).values(attendanceRecords);
-    console.log("✅ Attendance records created");
-
-    // Create leave balances
-    await db.insert(leaveBalances).values([
-      {
-        id: crypto.randomUUID(),
-        employeeId: emp1Id,
-        leaveType: "Annual Leave",
-        total: 20,
-        used: 5,
-        remaining: 15,
-        year: new Date().getFullYear(),
-      },
-      {
-        id: crypto.randomUUID(),
-        employeeId: emp1Id,
-        leaveType: "Sick Leave",
-        total: 10,
-        used: 2,
-        remaining: 8,
-        year: new Date().getFullYear(),
-      },
-      {
-        id: crypto.randomUUID(),
-        employeeId: emp1Id,
-        leaveType: "Casual Leave",
-        total: 7,
-        used: 1,
-        remaining: 6,
-        year: new Date().getFullYear(),
-      },
-      {
-        id: crypto.randomUUID(),
-        employeeId: emp2Id,
-        leaveType: "Annual Leave",
-        total: 20,
-        used: 3,
-        remaining: 17,
-        year: new Date().getFullYear(),
-      },
-    ]);
-
-    console.log("✅ Leave balances created");
-
-    // Create some sample leave requests
-    await db.insert(leaveRequests).values([
-      {
-        id: crypto.randomUUID(),
-        employeeId: emp1Id,
-        leaveType: "Annual Leave",
-        startDate: "2024-02-01",
-        endDate: "2024-02-03",
-        days: 3,
-        reason: "Family vacation",
-        status: "approved",
-      },
-      {
-        id: crypto.randomUUID(),
-        employeeId: emp2Id,
-        leaveType: "Sick Leave",
-        startDate: "2024-01-15",
-        endDate: "2024-01-16",
-        days: 2,
-        reason: "Medical appointment",
-        status: "pending",
-      },
-    ]);
-
-    console.log("✅ Leave requests created");
-
-    // Create sample notifications
-    const user1Result = await db.select().from(users).where(eq(users.employeeId, emp1Id)).limit(1);
-    if (user1Result.length > 0) {
-      await db.insert(notifications).values([
-        {
-          id: crypto.randomUUID(),
-          userId: user1Result[0].id,
-          title: "Leave Approved",
-          message: "Your annual leave request has been approved",
-          type: "leave",
-          read: false,
-        },
-        {
-          id: crypto.randomUUID(),
-          userId: user1Result[0].id,
-          title: "Welcome to HRMasterMind",
-          message: "Your account has been successfully created",
-          type: "system",
-          read: false,
-        },
+    // Departments
+    const deptCount = await Department.countDocuments();
+    if (deptCount === 0) {
+      await Department.insertMany([
+        { name: 'Engineering', description: 'Software Development and IT' },
+        { name: 'Human Resources', description: 'Employee management and recruiting' },
+        { name: 'Sales', description: 'Sales and business development' },
+        { name: 'Marketing', description: 'Marketing and advertising' },
+        { name: 'Finance', description: 'Accounting and finance' },
       ]);
-      console.log("✅ Notifications created");
+      console.log('Departments seeded');
     }
 
-    console.log("🎉 Database seeding completed successfully!");
-  } catch (error) {
-    console.error("❌ Error seeding database:", error);
-    throw error;
-  }
-}
+    // Zones
+    const zoneCount = await Zone.countDocuments();
+    if (zoneCount === 0) {
+      await Zone.insertMany([
+        { name: 'New York Office', description: 'Headquarters' },
+        { name: 'London Office', description: 'European Branch' },
+        { name: 'Remote (US)', description: 'US Remote Employees' },
+        { name: 'Remote (Global)', description: 'International Remote Employees' },
+      ]);
+      console.log('Zones seeded');
+    }
 
-// Run the seed function
-seed()
-  .then(() => {
-    console.log("✨ Seeding finished");
+    // Roles
+    const roles = [
+      { name: 'Admin', description: 'System Administrator', protected: true },
+      { name: 'HR', description: 'Human Resources', protected: true },
+      { name: 'Employee', description: 'General Employee', protected: true },
+      { name: 'Software Engineer', description: 'Full stack developer' },
+      { name: 'Senior Software Engineer', description: 'Lead developer' },
+      { name: 'Product Manager', description: 'Product strategy and roadmap' },
+      { name: 'HR Manager', description: 'HR operations lead' },
+      { name: 'Sales Representative', description: 'Client acquisition' },
+      { name: 'Designer', description: 'UI/UX Designer' },
+    ];
+
+    for (const role of roles) {
+      await Role.findOneAndUpdate(
+        { name: role.name },
+        role,
+        { upsert: true, new: true }
+      );
+    }
+    console.log('Roles seeded');
+
+    console.log('Seeding complete');
     process.exit(0);
-  })
-  .catch((error) => {
-    console.error("Fatal error:", error);
+  } catch (error) {
+    console.error('Seeding failed:', error);
     process.exit(1);
-  });
+  }
+};
+
+seedOrgData();
