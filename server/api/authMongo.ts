@@ -16,25 +16,32 @@ router.post('/signup', async (req: Request, res: Response) => {
     const { username, email, password, fullName, department, position, phone, location, role } = req.body;
 
     // Validation
-    if (!username || !email || !password || !fullName || !department || !position) {
+    if (!username || !email || !password || !fullName) {
       return res.status(400).json({ message: 'Please provide all required fields' });
     }
 
-    // Validate against admin-created values
-    const validDept = await Department.findOne({ name: department });
-    if (!validDept) {
-      return res.status(400).json({ message: 'Invalid department. Please select from the list.' });
-    }
+    // Only validate department and position for non-admin users
+    if (role !== 'admin') {
+      if (!department || !position) {
+        return res.status(400).json({ message: 'Please provide department and position' });
+      }
 
-    const validPosition = await AppRole.findOne({ name: position });
-    if (!validPosition) {
-      return res.status(400).json({ message: 'Invalid position. Please select from the list.' });
-    }
+      // Validate against admin-created values
+      const validDept = await Department.findOne({ name: department });
+      if (!validDept) {
+        return res.status(400).json({ message: 'Invalid department. Please select from the list.' });
+      }
 
-    if (location) {
-      const validZone = await Zone.findOne({ name: location });
-      if (!validZone) {
-        return res.status(400).json({ message: 'Invalid location. Please select from the list.' });
+      const validPosition = await AppRole.findOne({ name: position });
+      if (!validPosition) {
+        return res.status(400).json({ message: 'Invalid position. Please select from the list.' });
+      }
+
+      if (location) {
+        const validZone = await Zone.findOne({ name: location });
+        if (!validZone) {
+          return res.status(400).json({ message: 'Invalid location. Please select from the list.' });
+        }
       }
     }
 
@@ -73,8 +80,8 @@ router.post('/signup', async (req: Request, res: Response) => {
       password: hashedPassword,
       fullName,
       employeeId,
-      department,
-      position,
+      department: department || 'Administration',
+      position: position || 'Administrator',
       phone: phone || '',
       location: location || '',
       role: role === 'admin' ? 'admin' : 'employee'

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/hrmaster';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://omega:ID2rpl8o2lFXszM4@cluster0.6petonv.mongodb.net/hrmaster?retryWrites=true&w=majority&appName=Cluster0';
 
 export const connectDB = async () => {
   try {
