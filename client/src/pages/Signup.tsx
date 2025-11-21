@@ -109,22 +109,24 @@ export default function Signup() {
       return;
     }
 
-    if (!formData.department) {
-      toast({
-        title: "Missing Information",
-        description: "Please select a department",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!isAdmin) {
+      if (!formData.department) {
+        toast({
+          title: "Missing Information",
+          description: "Please select a department",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (!formData.position) {
-      toast({
-        title: "Missing Information",
-        description: "Please select a position",
-        variant: "destructive",
-      });
-      return;
+      if (!formData.position) {
+        toast({
+          title: "Missing Information",
+          description: "Please select a position",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     if (formData.password !== formData.confirmPassword) {
@@ -298,7 +300,7 @@ export default function Signup() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="department">Department</Label>
+              <Label htmlFor="department">Department {isAdmin ? '(Optional)' : '*'}</Label>
               <Select 
                 value={formData.department} 
                 onValueChange={(v) => setFormData({...formData, department: v})}
@@ -315,7 +317,7 @@ export default function Signup() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="position">Position</Label>
+              <Label htmlFor="position">Position {isAdmin ? '(Optional)' : '*'}</Label>
               <Select 
                 value={formData.position} 
                 onValueChange={(v) => setFormData({...formData, position: v})}
@@ -353,7 +355,7 @@ export default function Signup() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
+              <Label htmlFor="location">Location {isAdmin ? '(Optional)' : ''}</Label>
               <Select 
                 value={formData.location} 
                 onValueChange={(v) => setFormData({...formData, location: v})}
