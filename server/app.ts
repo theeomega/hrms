@@ -21,6 +21,10 @@ declare module 'http' {
 
 export async function createApp() {
   const app = express();
+  
+  // Connect to MongoDB
+  await connectDB();
+
   app.use(express.json({
     verify: (req, _res, buf) => {
       req.rawBody = buf;
