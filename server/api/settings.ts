@@ -1,8 +1,8 @@
 import { Router, Response } from 'express';
-import { SystemSettingsModel } from '../models/SystemSettingsModel';
-import LeaveBalance from '../models/LeaveBalanceModel';
-import { verifyToken, AuthRequest } from '../middleware/auth';
-import User from '../models/UserModel';
+import { SystemSettingsModel } from '../models/SystemSettingsModel.js';
+import LeaveBalance from '../models/LeaveBalanceModel.js';
+import { verifyToken, AuthRequest } from '../middleware/auth.js';
+import User from '../models/UserModel.js';
 
 const router = Router();
 

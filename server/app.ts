@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerMongoRoutes } from "./routes-mongo";
-import { connectDB } from "./config/mongodb";
+import { registerMongoRoutes } from "./routes-mongo.js";
+import { connectDB } from "./config/mongodb.js";
 
 function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

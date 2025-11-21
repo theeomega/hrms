@@ -1,19 +1,19 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import cookieParser from "cookie-parser";
-import authMongo from "./api/authMongo";
-import dashboardMongo from "./api/dashboardMongo";
-import attendanceMongo from "./api/attendanceMongo";
-import leaveMongo from "./api/leaveMongo";
-import notificationsMongo from "./api/notificationsMongo";
-import profileMongo from "./api/profileMongo";
-import employeeMongo from "./api/employeeMongo";
-import orgMongo from "./api/orgMongo";
-import messagesMongo from "./api/messagesMongo";
-import settingsRoutes from "./api/settings";
-import cronRoutes from "./api/cron";
-import { verifyToken } from "./middleware/auth";
-import publicOrg from "./api/publicOrg";
+import authMongo from "./api/authMongo.js";
+import dashboardMongo from "./api/dashboardMongo.js";
+import attendanceMongo from "./api/attendanceMongo.js";
+import leaveMongo from "./api/leaveMongo.js";
+import notificationsMongo from "./api/notificationsMongo.js";
+import profileMongo from "./api/profileMongo.js";
+import employeeMongo from "./api/employeeMongo.js";
+import orgMongo from "./api/orgMongo.js";
+import messagesMongo from "./api/messagesMongo.js";
+import settingsRoutes from "./api/settings.js";
+import cronRoutes from "./api/cron.js";
+import { verifyToken } from "./middleware/auth.js";
+import publicOrg from "./api/publicOrg.js";
 
 export async function registerMongoRoutes(app: Express): Promise<Server> {
   // Cookie parser middleware
