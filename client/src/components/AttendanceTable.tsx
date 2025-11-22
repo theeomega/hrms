@@ -46,8 +46,8 @@ export default function AttendanceTable({ records }: AttendanceTableProps) {
   };
 
   return (
-    <>
-      <Table>
+    <div className="rounded-md border overflow-x-auto">
+      <Table className="min-w-[600px]">
         <TableHeader>
           <TableRow>
             <TableHead>Date</TableHead>
@@ -98,6 +98,6 @@ export default function AttendanceTable({ records }: AttendanceTableProps) {
           ))}
         </TableBody>
       </Table>
-    </>
+    </div>
   );
 }

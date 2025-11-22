@@ -63,17 +63,17 @@ export default function Attendance() {
   const totalHours = filteredAttendance.reduce((acc: number, r: any) => acc + (parseFloat(String(r.hours)) || 0), 0);
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-12">
+    <div className="max-w-[1600px] mx-auto space-y-6 md:space-y-12 p-4 md:p-6">
       {/* Unique Minimal Header - Split Design */}
       <div className="relative">
         <div className="absolute top-0 right-0 w-64 h-32 bg-gradient-to-bl from-primary/5 to-transparent rounded-full blur-3xl" />
-        <div className="relative flex items-start justify-between">
+        <div className="relative flex flex-col md:flex-row items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-baseline gap-3">
-              <h1 className="text-5xl font-light tracking-tight">My</h1>
-              <span className="text-5xl font-bold">Attendance</span>
+              <h1 className="text-3xl md:text-5xl font-light tracking-tight">My</h1>
+              <span className="text-3xl md:text-5xl font-bold">Attendance</span>
             </div>
-            <p className="text-muted-foreground text-lg ml-1">
+            <p className="text-muted-foreground text-base md:text-lg ml-1">
               Track your attendance records and patterns
             </p>
           </div>

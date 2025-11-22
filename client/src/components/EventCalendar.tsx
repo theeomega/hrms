@@ -83,7 +83,7 @@ const EventCalendar = () => {
           </button>
         </div>
 
-        <div className="p-6 flex justify-center">
+        <div className="p-2 sm:p-4 md:p-6 flex justify-center">
         <Calendar
           mode="single"
           selected={date}
@@ -101,8 +101,8 @@ const EventCalendar = () => {
             nav_button_next: "right-1",
             caption_label: "text-sm font-medium",
             head_cell: "text-muted-foreground rounded-md w-full font-normal text-sm",
-            cell: "h-12 w-12 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-transparent [&:has([aria-selected].day-outside)]:bg-transparent",
-            day: "h-12 w-12 p-0 font-normal aria-selected:opacity-100",
+            cell: "h-9 w-9 sm:h-10 sm:w-10 md:h-12 md:w-12 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-transparent [&:has([aria-selected].day-outside)]:bg-transparent",
+            day: "h-9 w-9 sm:h-10 sm:w-10 md:h-12 md:w-12 p-0 font-normal aria-selected:opacity-100",
             day_selected: "bg-red-600 text-white rounded-full hover:bg-red-700 focus:bg-red-700",
             day_today: "bg-accent text-accent-foreground rounded-full",
             day_outside: "text-muted-foreground opacity-50",
