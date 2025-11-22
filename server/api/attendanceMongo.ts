@@ -237,6 +237,7 @@ router.get('/today', async (req: AuthRequest, res: Response) => {
       checkedIn: !!attendance.checkIn,
       checkedOut: !!attendance.checkOut,
       checkIn: attendance.checkIn ? attendance.checkIn.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : null,
+      checkInISO: attendance.checkIn ? attendance.checkIn.toISOString() : null,
       checkOut: attendance.checkOut ? attendance.checkOut.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : null,
       hours: attendance.hours.toFixed(1),
       status: attendance.status,

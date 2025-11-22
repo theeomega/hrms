@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { LogIn, LogOut, CalendarDays } from "lucide-react";
@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function AttendanceButton() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [timeLeft, setTimeLeft] = useState<number>(0);
 
   // Fetch today's attendance status
   const { data: todayData, isLoading } = useQuery({
@@ -18,6 +19,34 @@ export default function AttendanceButton() {
     },
     refetchInterval: 30000, // Refetch every 30 seconds
   });
+
+  const checkedIn = todayData?.checkedIn;
+  const checkedOut = todayData?.checkedOut;
+  const checkInTime = todayData?.checkIn;
+  const checkInISO = todayData?.checkInISO;
+  const isWorkingDay = todayData?.isWorkingDay;
+  const nonWorkingReason = todayData?.nonWorkingReason;
+
+  useEffect(() => {
+    if (checkInISO && !checkedOut) {
+      const checkInTimestamp = new Date(checkInISO).getTime();
+      const now = new Date().getTime();
+      const diff = Math.max(0, 300 - Math.floor((now - checkInTimestamp) / 1000)); // 300 seconds = 5 mins
+      setTimeLeft(diff);
+
+      if (diff > 0) {
+        const timer = setInterval(() => {
+          const newNow = new Date().getTime();
+          const newDiff = Math.max(0, 300 - Math.floor((newNow - checkInTimestamp) / 1000));
+          setTimeLeft(newDiff);
+          if (newDiff <= 0) clearInterval(timer);
+        }, 1000);
+        return () => clearInterval(timer);
+      }
+    } else {
+      setTimeLeft(0);
+    }
+  }, [checkInISO, checkedOut]);
 
   // Check-in mutation
   const checkInMutation = useMutation({
@@ -105,12 +134,6 @@ export default function AttendanceButton() {
     );
   }
 
-  const checkedIn = todayData?.checkedIn;
-  const checkedOut = todayData?.checkedOut;
-  const checkInTime = todayData?.checkIn;
-  const isWorkingDay = todayData?.isWorkingDay;
-  const nonWorkingReason = todayData?.nonWorkingReason;
-
   if (isWorkingDay === false) {
     return (
       <div className="space-y-3">
@@ -142,12 +165,12 @@ export default function AttendanceButton() {
           variant="outline"
           size="lg"
           onClick={handleCheckOut}
-          disabled={checkOutMutation.isPending}
+          disabled={checkOutMutation.isPending || timeLeft > 0}
           className="w-full"
           data-testid="button-checkout"
         >
           <LogOut className="w-4 h-4 mr-2" />
-          {checkOutMutation.isPending ? 'Checking out...' : 'Check Out'}
+          {checkOutMutation.isPending ? 'Checking out...' : timeLeft > 0 ? `Wait ${Math.ceil(timeLeft / 60)}m to Check Out` : 'Check Out'}
         </Button>
       </div>
     );
