@@ -12,6 +12,7 @@ export interface ILeave extends Document {
   approvedBy: mongoose.Types.ObjectId | null;
   approvalDate: Date | null;
   rejectionReason: string;
+  reviewNotes: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,7 +36,8 @@ const LeaveSchema: Schema = new Schema({
   appliedOn: { type: Date, default: Date.now },
   approvedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   approvalDate: { type: Date, default: null },
-  rejectionReason: { type: String, default: '' }
+  rejectionReason: { type: String, default: '' },
+  reviewNotes: { type: String, default: '' }
 }, {
   timestamps: true
 });

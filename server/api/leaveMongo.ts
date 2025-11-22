@@ -51,6 +51,7 @@ router.get('/requests', async (req: AuthRequest, res: Response) => {
       approvedBy: leave.approvedBy ? (leave.approvedBy as any).fullName : null,
       approvalDate: leave.approvalDate ? leave.approvalDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : null,
       rejectionReason: leave.rejectionReason,
+      reviewNotes: leave.reviewNotes || leave.rejectionReason,
       // Add ISO timestamps so detail views can show precise date/time
       appliedOnISO: leave.appliedOn?.toISOString?.() ?? null,
       approvalDateISO: leave.approvalDate ? leave.approvalDate.toISOString() : null,
@@ -191,10 +192,11 @@ router.post('/request', async (req: AuthRequest, res: Response) => {
 });
 
 // Approve leave request (HR admin only)
-router.post('/approve/:id', async (req: AuthRequest, res: Response) => {
+  router.post('/approve/:id', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;
     const { id } = req.params;
+    const { notes } = req.body;
 
     const user = await User.findById(userId);
     if (!user || (user.role !== 'admin' && user.role !== 'hr_admin')) {
@@ -210,13 +212,14 @@ router.post('/approve/:id', async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Leave request already processed' });
     }
 
-  leave.status = 'approved';
-  // Cast to any to satisfy TS typing for ObjectId
-  leave.approvedBy = userId as any;
+    leave.status = 'approved';
+    // Cast to any to satisfy TS typing for ObjectId
+    leave.approvedBy = userId as any;
     leave.approvalDate = new Date();
-    await leave.save();
-
-    // Update leave balance
+    if (notes) {
+      leave.reviewNotes = notes;
+    }
+    await leave.save();    // Update leave balance
     const currentYear = new Date().getFullYear();
     const balance = await LeaveBalance.findOne({ userId: leave.userId, year: currentYear });
     
@@ -270,6 +273,7 @@ router.post('/reject/:id', async (req: AuthRequest, res: Response) => {
 
     leave.status = 'rejected';
     leave.rejectionReason = reason || 'No reason provided';
+    leave.reviewNotes = reason || 'No reason provided';
     await leave.save();
 
     // Notify employee

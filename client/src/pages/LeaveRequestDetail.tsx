@@ -22,21 +22,18 @@ export default function LeaveRequestDetail() {
   const isEmployeeView = window.location.pathname.startsWith("/leaves/");
 
   // Fetch the specific leave request
-  const { data: leaveData, isLoading } = useQuery<any>({
-    queryKey: [`/api/leave/requests/${params.id}`],
+  const { data: allLeavesData, isLoading } = useQuery<any>({
+    queryKey: ['/api/leave/requests-admin'],
     queryFn: async () => {
       const response = await fetch('/api/leave/requests', { 
         credentials: 'include' 
       });
       if (!response.ok) throw new Error('Failed to fetch leave requests');
-      const data = await response.json();
-      const leave = data.leaves.find((l: any) => l.id === params.id);
-      if (!leave) throw new Error('Leave request not found');
-      return leave;
+      return response.json();
     },
   });
 
-  const leave = leaveData;
+  const leave = allLeavesData?.leaves?.find((l: any) => l.id === params.id);
   const isCompleted = leave?.status !== 'pending';
 
   // Helpers for consistent date parsing
