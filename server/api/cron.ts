@@ -10,6 +10,62 @@ import { startOfDay, endOfDay } from 'date-fns';
 const router = express.Router();
 
 // This endpoint is designed to be called by a cron job (e.g., Vercel Cron)
+// It should be scheduled to run at the beginning of the day (e.g., 00:05)
+router.get('/mark-leaves', async (req, res) => {
+  try {
+    const now = new Date();
+    const today = startOfDay(now);
+    const todayEnd = endOfDay(now);
+
+    // Find approved leaves for today
+    const approvedLeaves = await Leave.find({
+      status: 'approved',
+      startDate: { $lte: todayEnd },
+      endDate: { $gte: today }
+    });
+
+    let markedCount = 0;
+    const errors = [];
+
+    for (const leave of approvedLeaves) {
+      try {
+        // Check if attendance record already exists
+        const existingRecord = await Attendance.findOne({
+          userId: leave.userId,
+          date: { $gte: today, $lte: todayEnd }
+        });
+
+        if (!existingRecord) {
+          await Attendance.create({
+            userId: leave.userId,
+            date: now,
+            status: 'leave',
+            hours: 8, // Assuming 8 hours for leave
+            notes: 'Auto-marked on leave (Approved Leave)',
+            checkIn: null,
+            checkOut: null
+          });
+          markedCount++;
+        }
+      } catch (err) {
+        console.error(`Error marking leave for user ${leave.userId}:`, err);
+        errors.push(err);
+      }
+    }
+
+    res.json({ 
+      message: 'Leave marking complete', 
+      markedLeaves: markedCount,
+      errors: errors.length > 0 ? errors : undefined
+    });
+
+  } catch (error) {
+    console.error('Cron mark-leaves error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// This endpoint is designed to be called by a cron job (e.g., Vercel Cron)
 // It should be scheduled to run at the end of the day (e.g., 23:55)
 router.get('/mark-absent', async (req, res) => {
   try {
@@ -19,6 +75,16 @@ router.get('/mark-absent', async (req, res) => {
     // }
 
     const now = new Date();
+    
+    // Safety check: Ensure this only runs late in the day (e.g., after 8 PM)
+    // This prevents accidental execution during the day from marking people absent
+    if (now.getHours() < 20) {
+       return res.status(400).json({ 
+         message: 'Too early to mark absent. This job should run at the end of the day.',
+         currentTime: now.toISOString()
+       });
+    }
+
     const today = startOfDay(now);
     const todayEnd = endOfDay(now);
 
@@ -71,7 +137,7 @@ router.get('/mark-absent', async (req, res) => {
       });
     }
 
-    // 5. Check for approved leaves
+    // 5. Check for approved leaves (in case mark-leaves didn't run or leave was approved late)
     const approvedLeaves = await Leave.find({
       status: 'approved',
       startDate: { $lte: todayEnd },

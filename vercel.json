@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/mark-leaves",
+      "schedule": "5 0 * * *"
+    },
+    {
       "path": "/api/cron/mark-absent",
       "schedule": "55 23 * * *"
     }
